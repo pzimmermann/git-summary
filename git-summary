@@ -88,7 +88,8 @@ git_summary() {
 
     local branches=$(repo_branches $target)
     local remotes=$(repo_remotes $target origin)
-    local max_repo_len=$(max_len "$repos")
+    local reldirs=$(repo_reldirs $target)
+    local max_repo_len=$(max_len "$reldirs")
     local max_branch_len=$(max_len "$branches")
     local max_remote_len=$(max_len "$remotes")
     local template=$(printf "%%b%%-%ds  %%-%ds  %%-5s  %%-%ds" $max_repo_len $max_branch_len)
@@ -142,9 +143,9 @@ summarize_one_git_repo () {
     local template=$2
     local local_only=$3
 
-    local app_name=$f
-    local branch_name=`git -C $f symbolic-ref HEAD | sed -e "s/^refs\/heads\///"`
-    local remote_url=`git -C $f remote get-url origin 2>/dev/null || echo -n ''`
+    local app_name=$(repo_reldir $f)
+    local branch_name=$(repo_branch $f)
+    local remote_url=$(repo_remote $f origin)
     local numState=0
 
     ### Check remote state
@@ -219,10 +220,13 @@ repo_branch () {
     git -C $1 symbolic-ref HEAD | sed -e "s/^refs\/heads\///"
 }
 
-repo_remote() {
+repo_remote () {
   git -C $1 remote get-url $2 2>/dev/null || echo -n ''
 }
 
+repo_reldir () {
+  echo $1|sed -r "s;$PWD/;;"
+}
 
 # Given a path to a folder containing some git repos, compute the
 # names of the folders which actually do contain git repos.
@@ -246,6 +250,15 @@ list_repos () {
     		$dirname_cmd -z $i | xargs -0 -L1
     	fi
   done
+}
+
+
+repo_reldirs() {
+    local path=$1
+    local repo
+    for repo in $(list_repos $path) ; do
+        echo $(repo_reldir $repo)
+    done
 }
 
 
